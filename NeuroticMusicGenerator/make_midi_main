@@ -1,0 +1,50 @@
+from random import randint
+
+from NeuroticMusicGenerator.generate import MyMidiNote, MyMidiNoteGenerator
+from miditime.miditime import MIDITime
+
+from NeuroticMusicGenerator.argument_parser import ProgramArguments
+from NeuroticMusicGenerator.fun_provider import FunProvider
+
+
+def randomise_notes(notes_num, percent, speed):
+    """generate list of MyMidiNotes with random values"""
+    random_notes_list = []
+    for a in range(0, round(notes_num * percent / 100)):
+        my_rand_note = MyMidiNote()
+        my_rand_note.randomise_note(randint(0, speed-20))
+        random_notes_list.append(my_rand_note)
+    return random_notes_list
+
+
+def main():
+    """main body of program that generates music"""
+    p = ProgramArguments()
+    p.parse()
+    speed = p.get_speed()
+    rand_note_percent = p.get_rand_percent()
+    notes_number = speed
+    my_midi = MIDITime(speed, p.get_file_name())
+    total_fun_cycles = len(p.list_fun) * p.fun_repeats
+    notes_per_cycle = speed / total_fun_cycles
+    time = 0
+
+    """loop for split functions that has to be played at the same time"""
+    for i in range(0, total_fun_cycles-1):
+        funcs_names = p.list_fun[i % len(p.list_fun)]
+        temp_fun_list = funcs_names.split(',')
+        # (temp_fun_list)
+        for elem in temp_fun_list:
+            fun = FunProvider.get_fun_from_string(elem)
+            my_note_list = MyMidiNoteGenerator.gen(
+                fun, FunProvider.get_fun_cycle_len(elem),
+                time, notes_per_cycle, 1, p.fun_repeats)
+            my_midi.add_track(my_note_list)
+        time += notes_per_cycle
+
+    my_midi.add_track(randomise_notes(notes_number, rand_note_percent, speed))
+    my_midi.save_midi()
+
+
+if __name__ == "__main__":
+    main()
